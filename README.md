@@ -81,6 +81,13 @@ deepdect/
     - `data/<dataset_name>/test/real/`
     - `data/<dataset_name>/test/fake/`
 
+### 데이터셋
+
+이 프로젝트는 다음 데이터셋을 사용하여 테스트되었습니다. `data` 폴더에 다운로드하여 준비할 수 있습니다.
+
+- **CIFAKE: Real and AI-Generated Synthetic Images**: [Kaggle Link](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images)
+- **AI-Generated Images vs Real Images**: [Kaggle Link](https://www.kaggle.com/datasets/tristanzhang32/ai-generated-images-vs-real-images)
+
 ### 사용법
 
 #### 전체 파이프라인 실행
@@ -195,6 +202,13 @@ deepdect/
     - `data/<dataset_name>/train/fake/`
     - `data/<dataset_name>/test/real/`
     - `data/<dataset_name>/test/fake/`
+
+### Datasets
+
+This project has been tested with the following datasets. You can download them and place them in the `data` folder.
+
+- **CIFAKE: Real and AI-Generated Synthetic Images**: [Kaggle Link](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images)
+- **AI-Generated Images vs Real Images**: [Kaggle Link](https://www.kaggle.com/datasets/tristanzhang32/ai-generated-images-vs-real-images)
 
 ### Usage
 
