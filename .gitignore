@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Output directories
+*_output/
+features.npz
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Data
+data/
