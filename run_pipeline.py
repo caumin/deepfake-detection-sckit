@@ -55,38 +55,54 @@ def main(args):
     test_csv = os.path.join(output_dir, f"{dataset_name}_test_features.csv")
 
     # --- 1. Feature Extraction ---
-    try:
-        # For training data
-        logging.info("--- Starting Feature Extraction for Training Data ---")
-        train_base_path = os.path.join(args.data_dir, 'train')
-        real_train_dir, fake_train_dir = find_real_fake_dirs(train_base_path)
-        extract_cmd_train = [
-            'python', 'extract_features.py',
-            '--real_dir', real_train_dir,
-            '--fake_dir', fake_train_dir,
-            '--out_csv', train_csv
-        ]
-        run_command(extract_cmd_train)
+    skip_extraction = False
+    if os.path.exists(train_csv) and os.path.exists(test_csv):
+        logging.info(f"Feature files already exist: {train_csv} and {test_csv}")
+        answer = input("Do you want to re-extract features? (y/N): ").lower().strip()
+        if answer != 'y':
+            logging.info("Skipping feature extraction.")
+            skip_extraction = True
 
-        # For testing data
-        logging.info("--- Starting Feature Extraction for Test Data ---")
-        test_base_path = os.path.join(args.data_dir, 'test')
-        real_test_dir, fake_test_dir = find_real_fake_dirs(test_base_path)
-        extract_cmd_test = [
-            'python', 'extract_features.py',
-            '--real_dir', real_test_dir,
-            '--fake_dir', fake_test_dir,
-            '--out_csv', test_csv
-        ]
-        run_command(extract_cmd_test)
-        logging.info("--- Feature Extraction Complete ---")
+    if not skip_extraction:
+        try:
+            # For training data
+            logging.info("--- Starting Feature Extraction for Training Data ---")
+            train_base_path = os.path.join(args.data_dir, 'train')
+            real_train_dir, fake_train_dir = find_real_fake_dirs(train_base_path)
+            extract_cmd_train = [
+                'python', 'extract_features.py',
+                '--real_dir', real_train_dir,
+                '--fake_dir', fake_train_dir,
+                '--out_csv', train_csv
+            ]
+            run_command(extract_cmd_train)
 
-    except (FileNotFoundError, subprocess.CalledProcessError) as e:
-        logging.error(f"Failed during feature extraction. Aborting pipeline. Error: {e}")
-        return
+            # For testing data
+            logging.info("--- Starting Feature Extraction for Test Data ---")
+            test_base_path = os.path.join(args.data_dir, 'test')
+            real_test_dir, fake_test_dir = find_real_fake_dirs(test_base_path)
+            extract_cmd_test = [
+                'python', 'extract_features.py',
+                '--real_dir', real_test_dir,
+                '--fake_dir', fake_test_dir,
+                '--out_csv', test_csv
+            ]
+            run_command(extract_cmd_test)
+            logging.info("--- Feature Extraction Complete ---")
+
+        except (FileNotFoundError, subprocess.CalledProcessError) as e:
+            logging.error(f"Failed during feature extraction. Aborting pipeline. Error: {e}")
+            return
+    else:
+        # We need to make sure the subsequent steps can run.
+        if not (os.path.exists(train_csv) and os.path.exists(test_csv)):
+            logging.error("Feature files not found, and extraction was skipped. Aborting pipeline.")
+            logging.error(f"Expected train features at: {train_csv}")
+            logging.error(f"Expected test features at: {test_csv}")
+            return
 
     # --- 2. & 3. Training and Evaluation Loop ---
-    supported_models = ['linsvm', 'rf', 'xgb', 'mlp']
+    supported_models = ['linsvm', 'rbfsvm', 'xgb', 'rf']
     logging.info(f"--- Starting Training and Evaluation for models: {supported_models} ---")
 
     for model_name in supported_models:
