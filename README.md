@@ -95,10 +95,11 @@ deepdect/
 `run_pipeline.py` 스크립트는 지정된 데이터셋에 대해 **특징 추출, 여러 모델 학습, 평가**까지의 전체 과정을 자동화합니다.
 
 ```bash
-python run_pipeline.py --data_dir data/CIFAKE
+python run_pipeline.py --data_dir data/CIFAKE --feature-importance
 ```
 
 - 이 명령은 `data/CIFAKE` 데이터셋을 사용하여, `CIFAKE_output` 폴더에 특징, 학습된 모델(`linsvm`, `rf`, `xgb`, `mlp`), 평가 리포트를 저장합니다.
+- `--feature-importance` 플래그를 추가하면, 지원되는 모델(`rf`, `xgb`)에 대해 각 특징의 중요도를 분석한 그래프(`feature_importance.png`)가 리포트 폴더에 함께 저장됩니다.
 
 #### 개별 스크립트 실행
 
@@ -217,10 +218,11 @@ This project has been tested with the following datasets. You can download them 
 The `run_pipeline.py` script automates the entire process of **feature extraction, training multiple models, and evaluation** for a specified dataset.
 
 ```bash
-python run_pipeline.py --data_dir data/CIFAKE
+python run_pipeline.py --data_dir data/CIFAKE --feature-importance
 ```
 
 - This command uses the `data/CIFAKE` dataset and saves the features, trained models (`linsvm`, `rf`, `xgb`, `mlp`), and evaluation reports into the `CIFAKE_output` directory.
+- By adding the `--feature-importance` flag, a feature importance plot (`feature_importance.png`) will also be saved in the report directory for supported models (`rf`, `xgb`).
 
 #### Running Individual Scripts
 
@@ -247,3 +249,22 @@ python eval.py --csv CIFAKE_output/test_features.csv --model CIFAKE_output/model
 ```bash
 python predict.py --model CIFAKE_output/model_rf.joblib --input /path/to/your/image.jpg
 ```
+---
+## Results
+
+### CIFAKE Dataset
+
+| Model         | Accuracy | AUROC  |
+|---------------|----------|--------|
+| Linear SVM    | 0.7969   | N/A    |
+| Random Forest | 0.7795   | 0.8552 |
+| XGBoost       | 0.8045   | 0.8861 |
+
+### AI-Generated vs. Real Images Dataset
+
+| Model         | Accuracy | AUROC  |
+|---------------|----------|--------|
+| Linear SVM    | 0.6631   | N/A    |
+| RBF SVM       | 0.6838   | 0.7416 |
+| Random Forest | 0.6923   | 0.7559 |
+| XGBoost       | 0.6998   | 0.7657 |

@@ -132,8 +132,13 @@ def main(args):
                 'python', 'eval.py',
                 '--csv', test_csv,
                 '--model', model_path,
-                '--report', report_path
+                '--report_dir', report_dir
             ]
+            
+            # Add feature importance flag for supported models
+            if args.feature_importance and model_name in ['rf', 'xgb']:
+                eval_cmd.append('--feature-importance')
+
             run_command(eval_cmd)
             logging.info(f"--- Finished processing model: {model_name.upper()} ---")
 
@@ -150,6 +155,11 @@ if __name__ == '__main__':
         type=str,
         required=True,
         help="Path to the dataset directory (e.g., 'data/CIFAKE')."
+    )
+    parser.add_argument(
+        '--feature-importance',
+        action='store_true',
+        help="If set, generate feature importance plots for tree-based models (rf, xgb)."
     )
     args = parser.parse_args()
     main(args)

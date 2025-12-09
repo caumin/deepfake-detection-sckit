@@ -13,6 +13,7 @@ def main():
     parser.add_argument('--csv', type=str, required=True, help="Path to the test features CSV file.")
     parser.add_argument('--model', type=str, required=True, help="Path to the trained model (.joblib file).")
     parser.add_argument('--report_dir', type=str, default='out/report', help="Directory to save evaluation report and plots.")
+    parser.add_argument('--feature-importance', action='store_true', help="If set, generate and save a feature importance plot for tree-based models.")
     
     args = parser.parse_args()
 
@@ -91,6 +92,38 @@ def main():
     plt.savefig(cm_path)
     print(f"Confusion matrix plot saved to {cm_path}")
     plt.close()
+
+    # --- Feature Importance Plot ---
+    if args.feature_importance:
+        if hasattr(model, 'feature_importances_'):
+            print("Generating feature importance plot...")
+            
+            # Get feature importances
+            importances = model.feature_importances_
+            feature_names = X_test.columns
+            
+            # Create a DataFrame for better handling
+            feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': importances})
+            
+            # Sort by importance and select top 20
+            top_features = feature_importance_df.sort_values(by='importance', ascending=False).head(20)
+            
+            # Plot
+            plt.figure(figsize=(12, 10))
+            plt.barh(top_features['feature'], top_features['importance'], color='skyblue')
+            plt.xlabel('Importance')
+            plt.ylabel('Feature')
+            plt.title(f'Top 20 Feature Importances for {os.path.basename(args.model)}')
+            plt.gca().invert_yaxis()  # Display the most important feature at the top
+            plt.tight_layout()
+            
+            # Save the plot
+            importance_plot_path = os.path.join(args.report_dir, 'feature_importance.png')
+            plt.savefig(importance_plot_path)
+            print(f"Feature importance plot saved to {importance_plot_path}")
+            plt.close()
+        else:
+            print("Model does not have 'feature_importances_' attribute. Skipping plot.")
 
 if __name__ == '__main__':
     main()
