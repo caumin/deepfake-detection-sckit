@@ -7,21 +7,18 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def run_command(command):
-    """Runs a shell command and logs its output."""
+    """Runs a shell command and lets its output stream to the console."""
     logging.info(f"Executing command: {' '.join(command)}")
     try:
-        result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-        if result.stdout:
-            logging.info("STDOUT:\n" + result.stdout)
-        if result.stderr:
-            logging.warning("STDERR:\n" + result.stderr)
+        # The subprocess will inherit stdout/stderr, so its output will be displayed directly.
+        subprocess.run(command, check=True, text=True, encoding='utf-8')
     except FileNotFoundError as e:
         logging.error(f"Error: Command not found. Ensure '{command[0]}' is in your PATH. Details: {e}")
         raise
     except subprocess.CalledProcessError as e:
-        logging.error(f"Command failed with exit code {e.returncode}.")
-        logging.error("STDOUT:\n" + e.stdout)
-        logging.error("STDERR:\n" + e.stderr)
+        # With capture_output=False, stdout/stderr are not captured in the exception object.
+        # The output would have been streamed to the console directly.
+        logging.error(f"Command '{' '.join(command)}' failed with exit code {e.returncode}.")
         raise
 
 def find_real_fake_dirs(base_path):
@@ -58,8 +55,8 @@ def main(args):
     skip_extraction = False
     if os.path.exists(train_csv) and os.path.exists(test_csv):
         logging.info(f"Feature files already exist: {train_csv} and {test_csv}")
-        answer = input("Do you want to re-extract features? (y/N): ").lower().strip()
-        if answer != 'y':
+        answer = input("Do you want to re-extract features? (Y/N): ").lower().strip()
+        if answer != 'Y':
             logging.info("Skipping feature extraction.")
             skip_extraction = True
 
