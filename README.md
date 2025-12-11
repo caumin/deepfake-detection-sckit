@@ -105,18 +105,24 @@ python run_pipeline.py --data_dir data/CIFAKE
 - `--feature-importance`: 지원되는 모델(`rf`, `xgb`)에 대해 각 특징의 중요도를 분석한 그래프(`feature_importance.png`)를 리포트 폴더에 함께 저장합니다.
 - `--force-extract`: 특징 파일(`_features.csv`)이 이미 존재하더라도 강제로 특징을 다시 추출합니다.
 - `--force-train`: 모델 파일(`.joblib`)이 이미 존재하더라도 강제로 모델을 다시 학습합니다.
+- `--residual_mode`: 노이즈 잔차 계산 방식을 선택합니다 ('denoise': 정교하고 느림, 'highpass': 빠름).
 
-**예시 (모든 과정 강제 실행 및 특징 중요도 분석):**
+**예시 (빠른 특징 추출 모드 사용):**
 ```bash
-python run_pipeline.py --data_dir data/CIFAKE --force-extract --force-train --feature-importance
+python run_pipeline.py --data_dir data/CIFAKE --residual_mode highpass
 ```
 
 #### 개별 스크립트 실행
 
 **1. 특징 추출 (`extract_features.py`)**
 
+- 이 스크립트는 멀티코어 병렬 처리를 사용하여 빠르게 특징을 추출합니다.
+- 주요 옵션:
+    - `--n_jobs`: 사용할 CPU 코어 수를 지정합니다 (-1은 전체 코어 사용).
+    - `--residual_mode`: 노이즈 잔차 계산 방식을 선택합니다 ('denoise', 'highpass').
+
 ```bash
-python extract_features.py --real_dir data/CIFAKE/train/real --fake_dir data/CIFAKE/train/fake --out_csv CIFAKE_output/train_features.csv
+python extract_features.py --real_dir data/CIFAKE/train/real --fake_dir data/CIFAKE/train/fake --out_csv CIFAKE_output/train_features.csv --residual_mode highpass
 ```
 
 **2. 모델 학습 (`train.py`)**
@@ -238,18 +244,24 @@ python run_pipeline.py --data_dir data/CIFAKE
 - `--feature-importance`: For supported models (`rf`, `xgb`), this will generate and save a plot of feature importances (`feature_importance.png`) in the report directory.
 - `--force-extract`: Forces the script to re-extract features even if the feature files (`_features.csv`) already exist.
 - `--force-train`: Forces the script to retrain models even if the model files (`.joblib`) already exist.
+- `--residual_mode`: Selects the method for noise residual calculation ('denoise': precise but slow, 'highpass': fast).
 
-**Example (forcing all steps and getting feature importance):**
+**Example (using the fast feature extraction mode):**
 ```bash
-python run_pipeline.py --data_dir data/CIFAKE --force-extract --force-train --feature-importance
+python run_pipeline.py --data_dir data/CIFAKE --residual_mode highpass
 ```
 
 #### Running Individual Scripts
 
 **1. Feature Extraction (`extract_features.py`)**
 
+- This script uses multi-core parallel processing to extract features quickly.
+- Key Options:
+    - `--n_jobs`: Number of CPU cores to use (-1 uses all available cores).
+    - `--residual_mode`: Method for noise residual calculation ('denoise' or 'highpass').
+
 ```bash
-python extract_features.py --real_dir data/CIFAKE/train/real --fake_dir data/CIFAKE/train/fake --out_csv CIFAKE_output/train_features.csv
+python extract_features.py --real_dir data/CIFAKE/train/real --fake_dir data/CIFAKE/train/fake --out_csv CIFAKE_output/train_features.csv --residual_mode highpass
 ```
 
 **2. Model Training (`train.py`)**
