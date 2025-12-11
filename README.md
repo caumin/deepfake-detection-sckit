@@ -95,11 +95,21 @@ deepdect/
 `run_pipeline.py` 스크립트는 지정된 데이터셋에 대해 **특징 추출, 여러 모델 학습, 평가**까지의 전체 과정을 자동화합니다.
 
 ```bash
-python run_pipeline.py --data_dir data/CIFAKE --feature-importance
+python run_pipeline.py --data_dir data/CIFAKE
 ```
 
-- 이 명령은 `data/CIFAKE` 데이터셋을 사용하여, `CIFAKE_output` 폴더에 특징, 학습된 모델(`linsvm`, `rf`, `xgb`, `mlp`), 평가 리포트를 저장합니다.
-- `--feature-importance` 플래그를 추가하면, 지원되는 모델(`rf`, `xgb`)에 대해 각 특징의 중요도를 분석한 그래프(`feature_importance.png`)가 리포트 폴더에 함께 저장됩니다.
+- 이 명령은 `data/CIFAKE` 데이터셋을 사용하여, `CIFAKE_output` 폴더에 특징, 학습된 모델, 평가 리포트를 저장합니다. 기본적으로, 이미 추출된 특징이나 학습된 모델이 있으면 해당 단계를 건너뛰어 시간을 절약합니다.
+
+##### 파이프라인 옵션
+
+- `--feature-importance`: 지원되는 모델(`rf`, `xgb`)에 대해 각 특징의 중요도를 분석한 그래프(`feature_importance.png`)를 리포트 폴더에 함께 저장합니다.
+- `--force-extract`: 특징 파일(`_features.csv`)이 이미 존재하더라도 강제로 특징을 다시 추출합니다.
+- `--force-train`: 모델 파일(`.joblib`)이 이미 존재하더라도 강제로 모델을 다시 학습합니다.
+
+**예시 (모든 과정 강제 실행 및 특징 중요도 분석):**
+```bash
+python run_pipeline.py --data_dir data/CIFAKE --force-extract --force-train --feature-importance
+```
 
 #### 개별 스크립트 실행
 
@@ -218,11 +228,21 @@ This project has been tested with the following datasets. You can download them 
 The `run_pipeline.py` script automates the entire process of **feature extraction, training multiple models, and evaluation** for a specified dataset.
 
 ```bash
-python run_pipeline.py --data_dir data/CIFAKE --feature-importance
+python run_pipeline.py --data_dir data/CIFAKE
 ```
 
-- This command uses the `data/CIFAKE` dataset and saves the features, trained models (`linsvm`, `rf`, `xgb`, `mlp`), and evaluation reports into the `CIFAKE_output` directory.
-- By adding the `--feature-importance` flag, a feature importance plot (`feature_importance.png`) will also be saved in the report directory for supported models (`rf`, `xgb`).
+- This command uses the `data/CIFAKE` dataset and saves the features, trained models, and evaluation reports into the `CIFAKE_output` directory. By default, it will skip feature extraction or training if the corresponding files already exist, saving time.
+
+##### Pipeline Options
+
+- `--feature-importance`: For supported models (`rf`, `xgb`), this will generate and save a plot of feature importances (`feature_importance.png`) in the report directory.
+- `--force-extract`: Forces the script to re-extract features even if the feature files (`_features.csv`) already exist.
+- `--force-train`: Forces the script to retrain models even if the model files (`.joblib`) already exist.
+
+**Example (forcing all steps and getting feature importance):**
+```bash
+python run_pipeline.py --data_dir data/CIFAKE --force-extract --force-train --feature-importance
+```
 
 #### Running Individual Scripts
 

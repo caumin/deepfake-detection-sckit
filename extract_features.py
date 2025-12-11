@@ -9,7 +9,7 @@ import pandas as pd
 
 from features import extract_all_features, get_feature_names
 
-def extract_features_from_dir(real_dir, fake_dir, img_size=256, reencode_jpeg=None, feature_bins=128):
+def extract_features_from_dir(real_dir, fake_dir, img_size=256, reencode_jpeg=None, spec_bins=128, color_bins=32):
     """
     Extracts features from all images in the real and fake directories.
     Based on gemini.md guidance.
@@ -49,7 +49,7 @@ def extract_features_from_dir(real_dir, fake_dir, img_size=256, reencode_jpeg=No
                     img = cv2.imdecode(img_encoded, cv2.IMREAD_COLOR)
 
                 # 2. Feature Extraction
-                feature_vector = extract_all_features(img, feature_size_spec1d=feature_bins)
+                feature_vector = extract_all_features(img, feature_size_spec1d=spec_bins, color_hist_bins=color_bins)
                 
                 if feature_vector is not None:
                     all_features.append(feature_vector)
@@ -60,7 +60,7 @@ def extract_features_from_dir(real_dir, fake_dir, img_size=256, reencode_jpeg=No
                 print(f"Skipping {path} due to error: {e}")
             
     # Combine into a pandas DataFrame as suggested by gemini.md for clarity
-    feature_names = get_feature_names(feature_size_spec1d=feature_bins)
+    feature_names = get_feature_names(feature_size_spec1d=spec_bins, color_hist_bins=color_bins)
     df = pd.DataFrame(all_features, columns=feature_names)
     df['label'] = labels
     df['path'] = paths
@@ -75,6 +75,7 @@ def main():
     parser.add_argument('--img_size', type=int, default=256, help="Size to resize images to (e.g., 256).")
     parser.add_argument('--reencode_jpeg', type=int, default=95, help="JPEG quality for re-encoding (e.g., 95). Set to 0 to disable.")
     parser.add_argument('--bins', type=int, default=128, help="Number of bins for the 1D power spectrum feature.")
+    parser.add_argument('--color_bins', type=int, default=32, help="Number of bins for the color saturation histogram.")
     
     args = parser.parse_args()
 
@@ -89,7 +90,8 @@ def main():
         fake_dir=args.fake_dir,
         img_size=args.img_size,
         reencode_jpeg=reencode_jpeg_quality,
-        feature_bins=args.bins
+        spec_bins=args.bins,
+        color_bins=args.color_bins
     )
     
     print(f"Saving {len(features_df)} features to {args.out_csv}...")

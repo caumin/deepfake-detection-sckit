@@ -53,12 +53,9 @@ def main(args):
 
     # --- 1. Feature Extraction ---
     skip_extraction = False
-    if os.path.exists(train_csv) and os.path.exists(test_csv):
-        logging.info(f"Feature files already exist: {train_csv} and {test_csv}")
-        answer = input("Do you want to re-extract features? (Y/N): ").lower().strip()
-        if answer != 'Y':
-            logging.info("Skipping feature extraction.")
-            skip_extraction = True
+    if os.path.exists(train_csv) and os.path.exists(test_csv) and not args.force_extract:
+        logging.info(f"Feature files already exist and --force-extract not specified. Skipping feature extraction.")
+        skip_extraction = True
 
     if not skip_extraction:
         try:
@@ -70,7 +67,9 @@ def main(args):
                 'python', 'extract_features.py',
                 '--real_dir', real_train_dir,
                 '--fake_dir', fake_train_dir,
-                '--out_csv', train_csv
+                '--out_csv', train_csv,
+                '--bins', str(args.bins),
+                '--color_bins', str(args.color_bins)
             ]
             run_command(extract_cmd_train)
 
@@ -82,7 +81,9 @@ def main(args):
                 'python', 'extract_features.py',
                 '--real_dir', real_test_dir,
                 '--fake_dir', fake_test_dir,
-                '--out_csv', test_csv
+                '--out_csv', test_csv,
+                '--bins', str(args.bins),
+                '--color_bins', str(args.color_bins)
             ]
             run_command(extract_cmd_test)
             logging.info("--- Feature Extraction Complete ---")
@@ -99,31 +100,35 @@ def main(args):
             return
 
     # --- 2. & 3. Training and Evaluation Loop ---
-    supported_models = ['linsvm', 'rbfsvm', 'xgb', 'rf']
+    #supported_models = ['linsvm', 'rbfsvm', 'xgb', 'rf']
+    supported_models = ['xgb']
     logging.info(f"--- Starting Training and Evaluation for models: {supported_models} ---")
 
     for model_name in supported_models:
         try:
             logging.info(f"--- Processing model: {model_name.upper()} ---")
             
-            # Define model and report paths
             model_path = os.path.join(output_dir, f"{dataset_name}_{model_name}.joblib")
             report_dir = os.path.join(output_dir, f"report_{dataset_name}_{model_name}")
-            os.makedirs(report_dir, exist_ok=True) # eval.py might need the folder to exist
-            report_path = os.path.join(report_dir, 'report.json')
+            os.makedirs(report_dir, exist_ok=True)
 
+            # --- Training ---
+            skip_training = False
+            if os.path.exists(model_path) and not args.force_train:
+                logging.info(f"Model file already exists: {model_path}. Skipping training.")
+                skip_training = True
 
-            # Train the model
-            logging.info(f"Training {model_name}...")
-            train_cmd = [
-                'python', 'train.py',
-                '--csv', train_csv,
-                '--model', model_name,
-                '--out_model', model_path
-            ]
-            run_command(train_cmd)
-
-            # Evaluate the model
+            if not skip_training:
+                logging.info(f"Training {model_name}...")
+                train_cmd = [
+                    'python', 'train.py',
+                    '--csv', train_csv,
+                    '--model', model_name,
+                    '--out_model', model_path
+                ]
+                run_command(train_cmd)
+            
+            # --- Evaluation ---
             logging.info(f"Evaluating {model_name}...")
             eval_cmd = [
                 'python', 'eval.py',
@@ -157,6 +162,28 @@ if __name__ == '__main__':
         '--feature-importance',
         action='store_true',
         help="If set, generate feature importance plots for tree-based models (rf, xgb)."
+    )
+    parser.add_argument(
+        '--force-train',
+        action='store_true',
+        help="If set, retrain all models even if model files already exist."
+    )
+    parser.add_argument(
+        '--force-extract',
+        action='store_true',
+        help="If set, re-extract features even if feature files already exist."
+    )
+    parser.add_argument(
+        '--bins',
+        type=int,
+        default=128,
+        help="Number of bins for the 1D power spectrum feature."
+    )
+    parser.add_argument(
+        '--color_bins',
+        type=int,
+        default=32,
+        help="Number of bins for the color saturation histogram."
     )
     args = parser.parse_args()
     main(args)
