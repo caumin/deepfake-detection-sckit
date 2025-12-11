@@ -119,21 +119,29 @@ def get_color_cues_features(img_rgb, hist_bins=32):
 # ------------------------------------------------------------------------------
 # (D) Noise residual 기반 특징
 # ------------------------------------------------------------------------------
-def get_noise_residual_features(img_rgb):
+def get_noise_residual_features(img_rgb, mode='denoise'):
     """
     Calculates features from the noise residual, as per gemini.md (D).
-    - Denoise-based residual
-    - Covariance of residual color channels
+    - Denoise-based residual (mode='denoise', slow)
+    - High-pass-based residual (mode='highpass', fast)
     """
     if img_rgb is None:
         return np.zeros(3)
 
-    # Use a faster denoising setting for efficiency
-    denoised = cv2.fastNlMeansDenoisingColored(img_rgb, None, h=10, hColor=10, templateWindowSize=7, searchWindowSize=21)
+    if mode == 'denoise':
+        # Use a faster denoising setting for efficiency
+        denoised = cv2.fastNlMeansDenoisingColored(img_rgb, None, h=10, hColor=10, templateWindowSize=7, searchWindowSize=21)
+        # Calculate residual (and convert to float for covariance)
+        residual = img_rgb.astype(np.float32) - denoised.astype(np.float32)
     
-    # Calculate residual (and convert to float for covariance)
-    residual = img_rgb.astype(np.float32) - denoised.astype(np.float32)
-    
+    elif mode == 'highpass':
+        # Apply Laplacian filter to each channel
+        # ksize=3 is a common choice for this filter
+        residual = cv2.Laplacian(img_rgb, cv2.CV_32F, ksize=3)
+        
+    else:
+        raise ValueError(f"Unknown residual mode: {mode}")
+
     res_r, res_g, res_b = residual[:,:,2].ravel(), residual[:,:,1].ravel(), residual[:,:,0].ravel()
     
     # Covariance matrix
@@ -147,7 +155,7 @@ def get_noise_residual_features(img_rgb):
     return np.array([cov_rg, cov_rb, cov_gb])
 
 
-def extract_all_features(img, feature_size_spec1d=128, color_hist_bins=32):
+def extract_all_features(img, feature_size_spec1d=128, color_hist_bins=32, residual_mode='denoise'):
     """
     Top-level function to extract and concatenate all feature sets.
     F(x) = [F_spec1D(x), F_specDistort(x), F_color(x), F_residual(x)]
@@ -165,7 +173,7 @@ def extract_all_features(img, feature_size_spec1d=128, color_hist_bins=32):
     color_features = get_color_cues_features(img, hist_bins=color_hist_bins)
     
     # (D) Noise Residuals
-    residual_features = get_noise_residual_features(img)
+    residual_features = get_noise_residual_features(img, mode=residual_mode)
     
     # Concatenate all features into a single vector
     final_feature_vector = np.concatenate([

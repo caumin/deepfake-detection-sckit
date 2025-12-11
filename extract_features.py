@@ -7,27 +7,50 @@ from tqdm import tqdm
 import argparse
 import pandas as pd
 
+from joblib import Parallel, delayed
 from features import extract_all_features, get_feature_names
 
-def extract_features_from_dir(real_dir, fake_dir, img_size=256, reencode_jpeg=None, spec_bins=128, color_bins=32):
+def process_image(path, label_int, img_size, reencode_jpeg, spec_bins, color_bins, residual_mode):
     """
-    Extracts features from all images in the real and fake directories.
-    Based on gemini.md guidance.
+    Worker function to process a single image.
+    Performs loading, preprocessing, and feature extraction.
     """
-    all_features = []
-    labels = []
-    paths = []
+    try:
+        img_array = np.fromfile(path, np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        if img is None:
+            return None
 
-    # --- Process Real and Fake Images ---
+        # 1. Preprocessing
+        img = cv2.resize(img, (img_size, img_size), interpolation=cv2.INTER_AREA)
+        if reencode_jpeg:
+            _, img_encoded = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), reencode_jpeg])
+            img = cv2.imdecode(img_encoded, cv2.IMREAD_COLOR)
+
+        # 2. Feature Extraction
+        feature_vector = extract_all_features(img, feature_size_spec1d=spec_bins, color_hist_bins=color_bins, residual_mode=residual_mode)
+        
+        if feature_vector is not None:
+            return feature_vector, label_int, path
+        return None
+    except Exception as e:
+        print(f"Skipping {path} due to error: {e}")
+        return None
+
+def extract_features_from_dir(real_dir, fake_dir, img_size=256, reencode_jpeg=None, spec_bins=128, color_bins=32, n_jobs=-1, residual_mode='denoise'):
+    """
+    Extracts features from all images in parallel using joblib.
+    """
+    tasks = []
+    
+    # --- Prepare list of tasks ---
     image_dirs = {
         'REAL': (real_dir, 1),
         'FAKE': (fake_dir, 0)
     }
 
     for label_str, (directory, label_int) in image_dirs.items():
-        print(f"Processing {label_str} images from: {directory}")
-        
-        # Using recursive glob to find all images
+        print(f"Preparing tasks for {label_str} images from: {directory}")
         image_paths = glob.glob(os.path.join(directory, '**', '*.jpg'), recursive=True) + \
                       glob.glob(os.path.join(directory, '**', '*.png'), recursive=True)
 
@@ -35,31 +58,29 @@ def extract_features_from_dir(real_dir, fake_dir, img_size=256, reencode_jpeg=No
             print(f"Warning: No images found in {directory}")
             continue
 
-        for path in tqdm(image_paths, desc=f"Extracting {label_str} features"):
-            try:
-                img_array = np.fromfile(path, np.uint8)
-                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-                if img is None:
-                    continue
+        for path in image_paths:
+            tasks.append(delayed(process_image)(path, label_int, img_size, reencode_jpeg, spec_bins, color_bins, residual_mode))
 
-                # 1. Preprocessing (as per gemini.md)
-                img = cv2.resize(img, (img_size, img_size), interpolation=cv2.INTER_AREA)
-                if reencode_jpeg:
-                    _, img_encoded = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), reencode_jpeg])
-                    img = cv2.imdecode(img_encoded, cv2.IMREAD_COLOR)
-
-                # 2. Feature Extraction
-                feature_vector = extract_all_features(img, feature_size_spec1d=spec_bins, color_hist_bins=color_bins)
-                
-                if feature_vector is not None:
-                    all_features.append(feature_vector)
-                    labels.append(label_int)
-                    paths.append(path)
-
-            except Exception as e:
-                print(f"Skipping {path} due to error: {e}")
+    # --- Run tasks in parallel ---
+    print(f"\nExtracting features from {len(tasks)} images using {n_jobs if n_jobs > 0 else 'all'} CPU cores...")
+    results = Parallel(n_jobs=n_jobs)(tqdm(tasks))
+    
+    # --- Process results ---
+    all_features = []
+    labels = []
+    paths = []
+    for res in results:
+        if res is not None:
+            feature_vector, label_int, path = res
+            all_features.append(feature_vector)
+            labels.append(label_int)
+            paths.append(path)
             
-    # Combine into a pandas DataFrame as suggested by gemini.md for clarity
+    if not all_features:
+        print("Error: No features were extracted. Check image paths and file integrity.")
+        return pd.DataFrame()
+            
+    # Combine into a pandas DataFrame
     feature_names = get_feature_names(feature_size_spec1d=spec_bins, color_hist_bins=color_bins)
     df = pd.DataFrame(all_features, columns=feature_names)
     df['label'] = labels
@@ -76,6 +97,8 @@ def main():
     parser.add_argument('--reencode_jpeg', type=int, default=95, help="JPEG quality for re-encoding (e.g., 95). Set to 0 to disable.")
     parser.add_argument('--bins', type=int, default=128, help="Number of bins for the 1D power spectrum feature.")
     parser.add_argument('--color_bins', type=int, default=32, help="Number of bins for the color saturation histogram.")
+    parser.add_argument('--n_jobs', type=int, default=-1, help="Number of parallel jobs to run (-1 uses all available cores).")
+    parser.add_argument('--residual_mode', type=str, default='denoise', choices=['denoise', 'highpass'], help="Method for noise residual calculation ('denoise' is slow, 'highpass' is fast).")
     
     args = parser.parse_args()
 
@@ -91,11 +114,14 @@ def main():
         img_size=args.img_size,
         reencode_jpeg=reencode_jpeg_quality,
         spec_bins=args.bins,
-        color_bins=args.color_bins
+        color_bins=args.color_bins,
+        n_jobs=args.n_jobs,
+        residual_mode=args.residual_mode
     )
     
     print(f"Saving {len(features_df)} features to {args.out_csv}...")
-    features_df.to_csv(args.out_csv, index=False)
+    if not features_df.empty:
+        features_df.to_csv(args.out_csv, index=False)
     print("Done.")
 
 if __name__ == '__main__':

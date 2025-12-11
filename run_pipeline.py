@@ -69,7 +69,8 @@ def main(args):
                 '--fake_dir', fake_train_dir,
                 '--out_csv', train_csv,
                 '--bins', str(args.bins),
-                '--color_bins', str(args.color_bins)
+                '--color_bins', str(args.color_bins),
+                '--residual_mode', args.residual_mode
             ]
             run_command(extract_cmd_train)
 
@@ -83,7 +84,8 @@ def main(args):
                 '--fake_dir', fake_test_dir,
                 '--out_csv', test_csv,
                 '--bins', str(args.bins),
-                '--color_bins', str(args.color_bins)
+                '--color_bins', str(args.color_bins),
+                '--residual_mode', args.residual_mode
             ]
             run_command(extract_cmd_test)
             logging.info("--- Feature Extraction Complete ---")
@@ -184,6 +186,13 @@ if __name__ == '__main__':
         type=int,
         default=32,
         help="Number of bins for the color saturation histogram."
+    )
+    parser.add_argument(
+        '--residual_mode',
+        type=str,
+        default='denoise',
+        choices=['denoise', 'highpass'],
+        help="Method for noise residual calculation ('denoise' is slow, 'highpass' is fast)."
     )
     args = parser.parse_args()
     main(args)
